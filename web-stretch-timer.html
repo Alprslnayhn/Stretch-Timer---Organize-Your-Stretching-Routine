@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esneme Zamanlayıcı</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background: linear-gradient(to right, #FF7E5F, #FEB47B);
+            color: white;
+            transition: background 0.5s ease;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        label {
+            font-size: 18px;
+            margin-top: 10px;
+            display: inline-block;
+            color: #fff;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 80px;
+            margin: 10px;
+            border-radius: 5px;
+            border: 2px solid #fff;
+            background-color: rgba(255, 255, 255, 0.3);
+            color: #fff;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border: 2px solid #4CAF50;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #status {
+            font-size: 24px;
+            margin: 20px 0;
+            font-weight: bold;
+            animation: fadeIn 2s ease;
+        }
+
+        #timer {
+            font-size: 80px;
+            color: #FF6347;
+            font-weight: bold;
+            animation: pulse 1.5s infinite;
+        }
+
+        #circle {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            margin: 30px auto;
+            background-color: #4CAF50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 1s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .completed {
+            color: #32CD32;
+        }
+
+        .stretches {
+            color: #FF6347;
+        }
+
+        .rests {
+            color: #FFD700;
+        }
+
+        .activeStretch {
+            background-color: #FF6347;
+        }
+
+        .activeRest {
+            background-color: #FFD700;
+        }
+    </style>
+</head>
+<body>
+    <h1>Esneme Zamanlayıcı</h1>
+    
+    <!-- Kullanıcı girdileri -->
+    <label>Set Sayısı: <input id="sets" type="number" min="1" value="3"></label><br><br>
+    <label>Esneme Süresi (saniye): <input id="stretchTime" type="number" min="1" value="30"></label><br><br>
+    <label>Dinlenme Süresi (saniye): <input id="restTime" type="number" min="1" value="600"></label><br><br>
+    <button onclick="startTimer()">Başlat</button>
+    
+    <!-- Durum ve zamanlayıcı -->
+    <p id="status">Hazır...</p>
+    <div id="timer">00:00</div>
+    <div id="circle"></div>
+
+    <!-- Ses dosyası ekleme (opsiyonel) -->
+    <audio id="endSound" src="end-sound.mp3" preload="auto"></audio>
+
+    <script>
+        let timer;
+        let setsRemaining;
+        let stretchTime;
+        let restTime;
+        let isStretching = true;
+
+        function startTimer() {
+            // Kullanıcı girdilerini al
+            const totalSets = parseInt(document.getElementById("sets").value);
+            stretchTime = parseInt(document.getElementById("stretchTime").value);
+            restTime = parseInt(document.getElementById("restTime").value);
+            
+            // Başlangıç değerlerini ayarla
+            setsRemaining = totalSets * 2; // Sağ ve sol için çarpıyoruz
+            isStretching = true;
+            if (timer) clearInterval(timer); // Önceki zamanlayıcıyı temizle
+            runPhase();
+        }
+
+        function runPhase() {
+            if (setsRemaining <= 0) {
+                document.getElementById("status").innerText = "Tamamlandı!";
+                document.getElementById("status").classList.add("completed");
+                document.getElementById("timer").innerText = "00:00";
+                document.getElementById("circle").style.transition = 'none';
+                document.getElementById("circle").style.transform = 'scale(0)';
+                return;
+            }
+
+            let phaseTime = isStretching ? stretchTime : restTime;
+            let phaseType = isStretching ? 
+                (setsRemaining % 2 === 0 ? "Sağ Esneme" : "Sol Esneme") : "Dinlenme";
+            
+            document.getElementById("status").innerText = phaseType;
+            document.getElementById("status").classList.remove("completed");
+            document.getElementById("status").classList.add(isStretching ? "stretches" : "rests");
+
+            // Daireyi güncelle
+            let circleSize = isStretching ? 200 : 150;
+            let colorClass = isStretching ? "activeStretch" : "activeRest";
+            document.getElementById("circle").classList.remove("activeStretch", "activeRest");
+            document.getElementById("circle").classList.add(colorClass);
+            
+            // Daireyi boyutlandırma
+            document.getElementById("circle").style.width = `${circleSize}px`;
+            document.getElementById("circle").style.height = `${circleSize}px`;
+
+            timer = setInterval(() => {
+                let minutes = Math.floor(phaseTime / 60).toString().padStart(2, '0');
+                let seconds = (phaseTime % 60).toString().padStart(2, '0');
+                document.getElementById("timer").innerText = `${minutes}:${seconds}`;
+                if (phaseTime <= 0) {
+                    clearInterval(timer);
+                    playBeep(); // Beep sesini çal
+                    if (isStretching) setsRemaining--; // Her esneme bitişinde set azalır
+                    isStretching = !isStretching; // Esneme ile dinlenme arasında geçiş
+                    runPhase();
+                }
+                phaseTime--;
+            }, 1000);
+        }
+
+        // JavaScript ile beep sesi
+        function playBeep() {
+            const beep = new AudioContext();
+            const oscillator = beep.createOscillator();
+            oscillator.connect(beep.destination);
+            oscillator.frequency.setValueAtTime(1000, beep.currentTime); // 1000 Hz frekansı
+            oscillator.start();
+            oscillator.stop(beep.currentTime + 0.2); // 0.2 saniye ses
+        }
+    </script>
+</body>
+</html>
