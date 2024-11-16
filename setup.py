@@ -13,7 +13,7 @@ def install_packages():
 
 # Ses dosyasını indir
 def download_sound():
-    sound_url = "https://www.soundjay.com/button/beep-07.wav"  # İndirilecek ses dosyasının URL'si
+    sound_url = "https://www.soundjay.com/buttons/beep-02.mp3"  # İndirilecek ses dosyasının URL'si
     sound_file = "beep.wav"
 
     # Dosya mevcutsa indirme işlemi yapma
