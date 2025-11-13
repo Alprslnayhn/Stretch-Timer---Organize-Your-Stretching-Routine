@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profesyonel Egzersiz Zamanlayıcı</title>
+    <style>
+        :root {
+            --primary-bg: #1a2a3a;
+            --secondary-bg: #2a3a4a;
+            --tertiary-bg: rgba(255,255,255,0.05);
+            --primary-text: #f0f0f0;
+            --accent-color: #3C8CE7;
+            --green-color: #2ECC71;
+            --red-color: #E74C3C;
+            --yellow-color: #F1C40F;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--primary-bg);
+            color: var(--primary-text);
+            margin: 0;
+            padding: 20px;
+        }
+        .hidden { display: none !important; }
+        .container { max-width: 800px; margin: 10px auto; background: var(--tertiary-bg); padding: 20px; border-radius: 10px; }
+        h1, h2 { color: #fff; border-bottom: 1px solid var(--secondary-bg); padding-bottom: 10px; }
+
+        /* Settings & Form */
+        .settings-panel, #exercise-form { text-align: left; }
+        .settings-panel label { font-weight: bold; }
+        #exercise-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        #exercise-form label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        #exercise-form input { width: 100%; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #445; background: var(--secondary-bg); color: var(--primary-text); }
+        .full-width { grid-column: 1 / -1; }
+
+        /* Buttons */
+        button { padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; color: white; cursor: pointer; margin: 5px; transition: background-color 0.3s, transform 0.1s; }
+        button:hover { filter: brightness(1.1); }
+        button:active { transform: translateY(1px); }
+        .btn-add { background-color: var(--accent-color); }
+        .btn-update { background-color: var(--yellow-color); color: #1a2a3a; }
+        .btn-control { background-color: var(--green-color); }
+        .btn-edit { background-color: var(--yellow-color); padding: 5px 10px; font-size: 14px; }
+        .btn-delete { background-color: var(--red-color); padding: 5px 10px; font-size: 14px; }
+
+        /* Program List */
+        #program-list { list-style: none; padding: 0; text-align: left; }
+        #program-list li { background: rgba(0,0,0,0.2); margin: 8px 0; padding: 10px 15px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        #program-list li.active-exercise { box-shadow: 0 0 10px var(--accent-color); background: var(--accent-color); }
+        .exercise-details { font-size: 0.8em; color: #bbb; }
+
+        /* Workout View */
+        #workout-container { display: flex; gap: 20px; text-align: left; }
+        #workout-timer-view { flex-grow: 1; }
+        #workout-program-view { width: 300px; flex-shrink: 0; }
+        #exercise-image { width: 100%; height: 250px; object-fit: cover; border-radius: 10px; margin-bottom: 20px; background: var(--secondary-bg); }
+        #status { font-size: 2.5em; margin: 10px 0; font-weight: bold; text-align: center; }
+
+        /* SVG Timer */
+        .timer-wrapper { position: relative; width: 250px; height: 250px; margin: 20px auto; }
+        .timer-wrapper svg { transform: rotate(-90deg); }
+        .timer-bg, .timer-progress { fill: none; stroke-width: 15; }
+        .timer-bg { stroke: var(--secondary-bg); }
+        .timer-progress { stroke: var(--yellow-color); transition: stroke-dashoffset 1s linear; }
+        .timer-progress.rest-color { stroke: var(--accent-color); }
+        #timer { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4em; font-weight: bold; color: var(--primary-text); }
+    </style>
+</head>
+<body>
+
+    <div id="setup-container">
+        <div class="container">
+            <h2>Ayarlar</h2>
+            <div class="settings-panel">
+                <label><input type="checkbox" id="confirm-next" checked> Egzersizler arası onay iste</label>
+            </div>
+        </div>
+
+        <div class="container">
+            <h2>Egzersiz Programı Oluştur</h2>
+            <form id="exercise-form" onsubmit="handleFormSubmit(); return false;">
+                <input type="hidden" id="editing-index" value="-1">
+                <div class="full-width">
+                    <label for="exerciseName">Egzersiz Adı:</label>
+                    <input type="text" id="exerciseName" placeholder="Örn: Omuz Esnetme" required>
+                </div>
+                <div>
+                    <label for="sets">Set Sayısı:</label>
+                    <input type="number" id="sets" min="1" value="3">
+                </div>
+                <div>
+                    <label for="exerciseDuration">Süre (saniye):</label>
+                    <input type="number" id="exerciseDuration" min="1" value="30">
+                </div>
+                <div>
+                    <label for="intraSetRest">Set Arası Dinlenme (s):</label>
+                    <input type="number" id="intraSetRest" min="0" value="10">
+                </div>
+                <div>
+                    <label for="restAfter">Egzersiz Sonrası Dinlenme (s):</label>
+                    <input type="number" id="restAfter" min="0" value="30">
+                </div>
+                 <div class="full-width">
+                    <label><input type="checkbox" id="isBilateral" onchange="toggleSideSwitchTime()"> Egzersiz Sağ/Sol Taraflı mı?</label>
+                </div>
+                <div class="full-width hidden" id="side-switch-time-container">
+                    <label for="sideSwitchTime">Taraf Değiştirme Süresi (s):</label>
+                    <input type="number" id="sideSwitchTime" min="1" value="5">
+                </div>
+                <div class="full-width">
+                    <label for="imageUrl">Fotoğraf URL'si (Opsiyonel):</label>
+                    <input type="text" id="imageUrl" placeholder="https://ornek.com/resim.jpg">
+                </div>
+                <div class="full-width">
+                    <button type="submit" id="form-submit-button" class="btn-add">Egzersizi Ekle</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="container">
+            <h2>Mevcut Program</h2>
+            <ul id="program-list"></ul>
+            <div id="program-controls">
+                <button onclick="startProgram()" class="btn-control">Programı Başlat</button>
+                <button onclick="saveProgram()" class="btn-control">Programı Kaydet</button>
+                <button onclick="loadProgram()" class="btn-control">Programı Yükle</button>
+                <button onclick="shareProgram()" class="btn-control">Programı Paylaş</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="workout-container" class="hidden">
+        <div id="workout-timer-view">
+            <h1 id="status">Hazırlan...</h1>
+            <img id="exercise-image" src="" alt="Egzersiz Görseli" class="hidden">
+            <div class="timer-wrapper">
+                <svg width="250" height="250" viewBox="0 0 100 100">
+                    <circle class="timer-bg" cx="50" cy="50" r="45"></circle>
+                    <circle class="timer-progress" cx="50" cy="50" r="45" stroke-dasharray="282.7" stroke-dashoffset="0"></circle>
+                </svg>
+                <div id="timer">00:00</div>
+            </div>
+        </div>
+        <div id="workout-program-view">
+            <h2>Program Akışı</h2>
+            <ul id="workout-program-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const setupContainer = document.getElementById('setup-container');
+        const workoutContainer = document.getElementById('workout-container');
+        const exerciseForm = document.getElementById('exercise-form');
+        const programListUl = document.getElementById('program-list');
+        const workoutProgramListUl = document.getElementById('workout-program-list');
+        const statusH1 = document.getElementById('status');
+        const timerDiv = document.getElementById('timer');
+        const exerciseImage = document.getElementById('exercise-image');
+        const confirmNextCheckbox = document.getElementById('confirm-next');
+        const formSubmitButton = document.getElementById('form-submit-button');
+        const editingIndexInput = document.getElementById('editing-index');
+        const sideSwitchContainer = document.getElementById('side-switch-time-container');
+        const timerProgress = document.querySelector('.timer-progress');
+        const SVG_CIRCUMFERENCE = 282.7;
+
+        // --- State Management ---
+        let program = [];
+        let currentExerciseIndex = 0;
+        let currentSet = 1;
+        let timerInterval;
+        let audioContext;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) { console.warn('Web Audio API is not supported.'); }
+            loadProgramFromUrlOrStorage();
+        });
+
+        function toggleSideSwitchTime() {
+            sideSwitchContainer.classList.toggle('hidden', !document.getElementById('isBilateral').checked);
+        }
+
+        // --- Sound Engine ---
+        function playSound(type) {
+            if (!audioContext) return;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+
+            let freq = 440, duration = 0.1, attack = 0.01, decay = 0.09;
+            switch(type) {
+                case 'set_end': freq = 660; break;
+                case 'rest_end': freq = 880; duration = 0.2; decay=0.19; break;
+                case 'rest_start': freq = 330; break;
+            }
+
+            gain.gain.setValueAtTime(0, audioContext.currentTime);
+            gain.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + attack);
+            gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration);
+            osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+            osc.start();
+            osc.stop(audioContext.currentTime + duration);
+        }
+
+        // --- Program & Form Management ---
+        function handleFormSubmit() {
+            const index = parseInt(editingIndexInput.value);
+            const exercise = {
+                name: document.getElementById('exerciseName').value.trim(),
+                sets: parseInt(document.getElementById('sets').value),
+                duration: parseInt(document.getElementById('exerciseDuration').value),
+                intraSetRest: parseInt(document.getElementById('intraSetRest').value),
+                restAfter: parseInt(document.getElementById('restAfter').value),
+                isBilateral: document.getElementById('isBilateral').checked,
+                sideSwitchTime: parseInt(document.getElementById('sideSwitchTime').value),
+                imageUrl: document.getElementById('imageUrl').value.trim()
+            };
+            if (!exercise.name || isNaN(exercise.sets) || isNaN(exercise.duration)) {
+                return alert("Lütfen gerekli alanları doldurun.");
+            }
+            if (index === -1) { // Add new
+                program.push(exercise);
+            } else { // Update existing
+                program[index] = exercise;
+            }
+            renderProgram();
+            resetForm();
+        }
+
+        function editExercise(index) {
+            const exercise = program[index];
+            editingIndexInput.value = index;
+            document.getElementById('exerciseName').value = exercise.name;
+            document.getElementById('sets').value = exercise.sets;
+            document.getElementById('exerciseDuration').value = exercise.duration;
+            document.getElementById('intraSetRest').value = exercise.intraSetRest;
+            document.getElementById('restAfter').value = exercise.restAfter;
+            document.getElementById('isBilateral').checked = exercise.isBilateral;
+            document.getElementById('sideSwitchTime').value = exercise.sideSwitchTime || 5;
+            document.getElementById('imageUrl').value = exercise.imageUrl;
+
+            toggleSideSwitchTime();
+            formSubmitButton.textContent = "Egzersizi Güncelle";
+            formSubmitButton.className = 'btn-update';
+            window.scrollTo(0, 0);
+        }
+
+        function resetForm() {
+            exerciseForm.reset();
+            editingIndexInput.value = -1;
+            formSubmitButton.textContent = "Egzersizi Ekle";
+            formSubmitButton.className = 'btn-add';
+            toggleSideSwitchTime();
+        }
+
+        function deleteExercise(index) {
+            if (confirm(`${program[index].name} egzersizini silmek istediğinize emin misiniz?`)) {
+                program.splice(index, 1);
+                renderProgram();
+            }
+        }
+
+        function renderProgram() {
+            const lists = [programListUl, workoutProgramListUl];
+            lists.forEach(ul => ul.innerHTML = '');
+            program.forEach((ex, index) => {
+                const details = `${ex.sets} set, ${ex.duration}s, ${ex.intraSetRest}s set arası, ${ex.restAfter}s sonra dinlenme`;
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <b>${index + 1}. ${ex.name}</b>
+                        <div class="exercise-details">${details}</div>
+                    </div>
+                    <div>
+                        <button class="btn-edit" onclick="editExercise(${index})">Düzenle</button>
+                        <button class="btn-delete" onclick="deleteExercise(${index})">Sil</button>
+                    </div>`;
+                const liClone = li.cloneNode(true);
+                // Re-attach listeners for the cloned node
+                liClone.querySelector('.btn-edit').onclick = () => editExercise(index);
+                liClone.querySelector('.btn-delete').onclick = () => deleteExercise(index);
+                programListUl.appendChild(li);
+                workoutProgramListUl.appendChild(liClone);
+            });
+        }
+
+        // --- Data Persistence & Sharing ---
+        function saveProgram() {
+            localStorage.setItem('proWorkoutProgram', JSON.stringify(program));
+            alert("Program kaydedildi!");
+        }
+        function loadProgram() {
+            const saved = localStorage.getItem('proWorkoutProgram');
+            if (saved) {
+                program = JSON.parse(saved);
+                renderProgram();
+            }
+        }
+        function loadProgramFromUrlOrStorage() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('program')) {
+                try {
+                    const data = JSON.parse(decodeURIComponent(atob(urlParams.get('program'))));
+                    program = data;
+                    renderProgram();
+                    alert('Paylaşılan program yüklendi!');
+                    window.history.replaceState({}, '', window.location.pathname);
+                } catch(e) { loadProgram(); }
+            } else {
+                loadProgram();
+            }
+        }
+        function shareProgram() {
+            if (program.length === 0) return alert("Paylaşılacak program yok.");
+            const data = btoa(encodeURIComponent(JSON.stringify(program)));
+            const url = `${window.location.origin}${window.location.pathname}?program=${data}`;
+            navigator.clipboard.writeText(url).then(() => alert("Paylaşım linki panoya kopyalandı!"), () => prompt("Link:", url));
+        }
+
+        // --- Workout Execution Logic ---
+        function startProgram() {
+            if (program.length === 0) return alert("Başlatılacak program yok.");
+            currentExerciseIndex = 0;
+            setupContainer.classList.add('hidden');
+            workoutContainer.classList.remove('hidden');
+            runNextExercise();
+        }
+
+        function stopProgram() {
+            clearInterval(timerInterval);
+            workoutContainer.classList.add('hidden');
+            setupContainer.classList.remove('hidden');
+        }
+
+        function runNextExercise() {
+            if (currentExerciseIndex >= program.length) {
+                alert("Program Tamamlandı!");
+                stopProgram();
+                return;
+            }
+            const proceed = () => {
+                const exercise = program[currentExerciseIndex];
+                currentSet = 1;
+                highlightActiveExercise(currentExerciseIndex);
+                exerciseImage.src = exercise.imageUrl || '';
+                exerciseImage.classList.toggle('hidden', !exercise.imageUrl);
+                runSet();
+            };
+            if (currentExerciseIndex > 0 && confirmNextCheckbox.checked) {
+                if (confirm(`Sıradaki egzersiz: ${program[currentExerciseIndex].name}. Başlamak için Tamam'a basın.`)) {
+                    proceed();
+                } else {
+                    stopProgram();
+                }
+            } else {
+                proceed();
+            }
+        }
+
+        function runSet() {
+            const exercise = program[currentExerciseIndex];
+            if (currentSet > exercise.sets) {
+                if (exercise.restAfter > 0) {
+                    runPhase(`Dinlenme`, exercise.restAfter, true, () => {
+                        currentExerciseIndex++;
+                        runNextExercise();
+                    });
+                } else {
+                    currentExerciseIndex++;
+                    runNextExercise();
+                }
+                return;
+            }
+
+            const onSetComplete = () => {
+                playSound('set_end');
+                if (currentSet < exercise.sets && exercise.intraSetRest > 0) {
+                    runPhase(`Set Arası Dinlenme`, exercise.intraSetRest, true, () => {
+                        currentSet++;
+                        runSet();
+                    });
+                } else {
+                    currentSet++;
+                    runSet();
+                }
+            };
+
+            const phaseName = `${exercise.name} (${currentSet}/${exercise.sets})`;
+            if (exercise.isBilateral) {
+                runPhase(`${phaseName} (Sağ)`, exercise.duration, false, () => {
+                   runPhase(`Taraf Değiştir`, exercise.sideSwitchTime, true, () => {
+                       runPhase(`${phaseName} (Sol)`, exercise.duration, false, onSetComplete);
+                   });
+                });
+            } else {
+                runPhase(phaseName, exercise.duration, false, onSetComplete);
+            }
+        }
+
+        function runPhase(name, duration, isRest, onComplete) {
+            statusH1.innerText = name;
+            timerProgress.classList.toggle('rest-color', isRest);
+            if (isRest) playSound('rest_start');
+
+            let timeLeft = duration;
+            const totalDuration = duration;
+
+            const updateVisuals = () => {
+                const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const seconds = (timeLeft % 60).toString().padStart(2, '0');
+                timerDiv.innerText = `${minutes}:${seconds}`;
+                const progress = timeLeft / totalDuration;
+                timerProgress.style.strokeDashoffset = (1 - progress) * SVG_CIRCUMFERENCE;
+            };
+
+            updateVisuals();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateVisuals();
+                if (timeLeft < 0) {
+                    clearInterval(timerInterval);
+                    playSound('rest_end');
+                    if (onComplete) onComplete();
+                }
+            }, 1000);
+        }
+
+        function highlightActiveExercise(index) {
+            workoutProgramListUl.querySelectorAll('li').forEach((li, i) => {
+                li.classList.toggle('active-exercise', i === index);
+            });
+        }
+    </script>
+</body>
+</html>
