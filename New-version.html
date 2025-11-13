@@ -81,17 +81,32 @@
             <h2>Egzersiz Programı Oluştur</h2>
             <form id="exercise-form" onsubmit="handleFormSubmit(); return false;">
                 <input type="hidden" id="editing-index" value="-1">
-                <div class="full-width">
-                    <label for="exerciseName">Egzersiz Adı:</label>
-                    <input type="text" id="exerciseName" placeholder="Örn: Omuz Esnetme" required>
-                </div>
+                        <div class="full-width">
+                            <label for="exerciseName">Egzersiz Adı:</label>
+                            <input type="text" id="exerciseName" placeholder="Örn: Omuz Esnetme" required>
+                        </div>
+
+                        <!-- Egzersiz tipi: Süre veya Tekrar -->
+                        <div class="full-width" id="exercise-type-group">
+                            <label>Egzersiz Tipi:</label>
+                            <div style="display:flex;gap:10px;align-items:center;">
+                                <label style="font-weight:normal;"><input type="radio" name="exerciseType" value="duration"> 🕒 Süreyle yapılacak</label>
+                                <label style="font-weight:normal;"><input type="radio" name="exerciseType" value="reps"> 🔁 Tekrar sayısıyla yapılacak</label>
+                            </div>
+                            <div id="type-error" class="hidden" role="alert" style="color:var(--yellow-color);margin-top:6px;">Lütfen egzersiz tipini seçin.</div>
+                        </div>
                 <div>
                     <label for="sets">Set Sayısı:</label>
                     <input type="number" id="sets" min="1" value="3">
                 </div>
-                <div>
+                <div id="duration-field">
                     <label for="exerciseDuration">Süre (saniye):</label>
                     <input type="number" id="exerciseDuration" min="1" value="30">
+                </div>
+
+                <div id="reps-field" class="hidden">
+                    <label for="exerciseReps">Tekrar Sayısı:</label>
+                    <input type="number" id="exerciseReps" min="1" value="10">
                 </div>
                 <div>
                     <label for="intraSetRest">Set Arası Dinlenme (s):</label>
@@ -178,6 +193,12 @@
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
             } catch (e) { console.warn('Web Audio API is not supported.'); }
             loadProgramFromUrlOrStorage();
+            // Attach listeners to exercise type radios to toggle UI
+            document.querySelectorAll('input[name="exerciseType"]').forEach(r => r.addEventListener('change', () => {
+                toggleTypeFields();
+                // hide type error when user chooses
+                document.getElementById('type-error').classList.add('hidden');
+            }));
         });
 
         function toggleSideSwitchTime() {
@@ -210,19 +231,45 @@
         // --- Program & Form Management ---
         function handleFormSubmit() {
             const index = parseInt(editingIndexInput.value);
-            const exercise = {
-                name: document.getElementById('exerciseName').value.trim(),
-                sets: parseInt(document.getElementById('sets').value),
-                duration: parseInt(document.getElementById('exerciseDuration').value),
-                intraSetRest: parseInt(document.getElementById('intraSetRest').value),
-                restAfter: parseInt(document.getElementById('restAfter').value),
-                isBilateral: document.getElementById('isBilateral').checked,
-                sideSwitchTime: parseInt(document.getElementById('sideSwitchTime').value),
-                imageUrl: document.getElementById('imageUrl').value.trim()
-            };
-            if (!exercise.name || isNaN(exercise.sets) || isNaN(exercise.duration)) {
-                return alert("Lütfen gerekli alanları doldurun.");
+
+            const selectedTypeEl = document.querySelector('input[name="exerciseType"]:checked');
+            if (!selectedTypeEl) {
+                // show inline error and focus first radio
+                const err = document.getElementById('type-error');
+                err.classList.remove('hidden');
+                const firstRadio = document.querySelector('input[name="exerciseType"]');
+                if (firstRadio) firstRadio.focus();
+                return;
             }
+
+            const type = selectedTypeEl.value; // 'duration' or 'reps'
+            const name = document.getElementById('exerciseName').value.trim();
+            const sets = parseInt(document.getElementById('sets').value);
+            const intraSetRest = parseInt(document.getElementById('intraSetRest').value);
+            const restAfter = parseInt(document.getElementById('restAfter').value);
+            const isBilateral = document.getElementById('isBilateral').checked;
+            const sideSwitchTime = parseInt(document.getElementById('sideSwitchTime').value);
+            const imageUrl = document.getElementById('imageUrl').value.trim();
+
+            // build exercise object depending on type
+            const exercise = { name, sets, intraSetRest, restAfter, isBilateral, sideSwitchTime, imageUrl, type };
+
+            if (type === 'duration') {
+                const duration = parseInt(document.getElementById('exerciseDuration').value);
+                exercise.duration = duration;
+                exercise.reps = null;
+                if (!name || isNaN(sets) || isNaN(duration)) {
+                    return alert('Lütfen gerekli alanları doldurun (isim, set, süre).');
+                }
+            } else if (type === 'reps') {
+                const reps = parseInt(document.getElementById('exerciseReps').value);
+                exercise.reps = reps;
+                exercise.duration = null;
+                if (!name || isNaN(sets) || isNaN(reps)) {
+                    return alert('Lütfen gerekli alanları doldurun (isim, set, tekrar).');
+                }
+            }
+
             if (index === -1) { // Add new
                 program.push(exercise);
             } else { // Update existing
@@ -237,7 +284,20 @@
             editingIndexInput.value = index;
             document.getElementById('exerciseName').value = exercise.name;
             document.getElementById('sets').value = exercise.sets;
-            document.getElementById('exerciseDuration').value = exercise.duration;
+            // If exercise has type/reps, restore selection and fields
+            if (exercise.type === 'reps' || (exercise.reps && !exercise.duration)) {
+                const r = document.querySelector('input[name="exerciseType"][value="reps"]');
+                if (r) r.checked = true;
+                document.getElementById('reps-field').classList.remove('hidden');
+                document.getElementById('duration-field').classList.add('hidden');
+                document.getElementById('exerciseReps').value = exercise.reps || '';
+            } else {
+                const r = document.querySelector('input[name="exerciseType"][value="duration"]');
+                if (r) r.checked = true;
+                document.getElementById('reps-field').classList.add('hidden');
+                document.getElementById('duration-field').classList.remove('hidden');
+                document.getElementById('exerciseDuration').value = exercise.duration || '';
+            }
             document.getElementById('intraSetRest').value = exercise.intraSetRest;
             document.getElementById('restAfter').value = exercise.restAfter;
             document.getElementById('isBilateral').checked = exercise.isBilateral;
@@ -256,6 +316,23 @@
             formSubmitButton.textContent = "Egzersizi Ekle";
             formSubmitButton.className = 'btn-add';
             toggleSideSwitchTime();
+            // clear type selection and hide errors/fields
+            document.querySelectorAll('input[name="exerciseType"]').forEach(r => r.checked = false);
+            document.getElementById('type-error').classList.add('hidden');
+            document.getElementById('reps-field').classList.add('hidden');
+            document.getElementById('duration-field').classList.remove('hidden');
+        }
+
+        // Toggle duration/reps fields based on selected type
+        function toggleTypeFields() {
+            const sel = document.querySelector('input[name="exerciseType"]:checked')?.value;
+            if (sel === 'reps') {
+                document.getElementById('reps-field').classList.remove('hidden');
+                document.getElementById('duration-field').classList.add('hidden');
+            } else {
+                document.getElementById('reps-field').classList.add('hidden');
+                document.getElementById('duration-field').classList.remove('hidden');
+            }
         }
 
         function deleteExercise(index) {
@@ -269,7 +346,13 @@
             const lists = [programListUl, workoutProgramListUl];
             lists.forEach(ul => ul.innerHTML = '');
             program.forEach((ex, index) => {
-                const details = `${ex.sets} set, ${ex.duration}s, ${ex.intraSetRest}s set arası, ${ex.restAfter}s sonra dinlenme`;
+                let mainMetric = '';
+                if (ex.type === 'reps' || (ex.reps && !ex.duration)) {
+                    mainMetric = `${ex.reps} tekrar`;
+                } else {
+                    mainMetric = `${ex.duration}s`;
+                }
+                const details = `${ex.sets} set, ${mainMetric}, ${ex.intraSetRest}s set arası, ${ex.restAfter}s sonra dinlenme`;
                 const li = document.createElement('li');
                 li.innerHTML = `
                     <div>
