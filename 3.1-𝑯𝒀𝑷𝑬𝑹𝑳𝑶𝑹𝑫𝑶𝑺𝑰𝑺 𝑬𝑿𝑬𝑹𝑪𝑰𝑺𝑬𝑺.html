@@ -50,6 +50,18 @@
         #program-list li.active-exercise { box-shadow: 0 0 10px var(--accent-color); background: var(--accent-color); }
         .exercise-details { font-size: 0.8em; color: #bbb; }
 
+        /* Saved Programs List */
+        #saved-programs-list { list-style: none; padding: 0; text-align: left; }
+        #saved-programs-list li { background: rgba(50,100,150,0.3); margin: 10px 0; padding: 12px 15px; border-radius: 5px; border-left: 4px solid var(--accent-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .saved-program-info { flex-grow: 1; }
+        .saved-program-info > div:first-child { font-weight: bold; color: #fff; font-size: 1.05em; }
+        .saved-program-info > div:last-child { font-size: 0.85em; color: #bbb; margin-top: 4px; }
+        .saved-program-actions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; width: 100%; }
+        .btn-start { background-color: var(--green-color); color: #1a2a3a; padding: 6px 12px; font-size: 13px; }
+        .btn-load { background-color: var(--accent-color); padding: 6px 12px; font-size: 13px; }
+        .btn-remove { background-color: var(--red-color); padding: 6px 12px; font-size: 13px; }
+        .btn-move { background-color: var(--yellow-color); color: #1a2a3a; padding: 4px 8px; font-size: 12px; }
+
         /* Workout View */
         #workout-container { display: flex; gap: 20px; text-align: left; }
         #workout-timer-view { flex-grow: 1; }
@@ -173,11 +185,17 @@
             <ul id="program-list"></ul>
             <div id="program-controls">
                 <button onclick="startProgram()" class="btn-control">Start Program</button>
-                <button onclick="saveProgram()" class="btn-control">Save Program</button>
+                <button onclick="saveCurrentProgram()" class="btn-control">Save Program</button>
                 <button onclick="loadProgram()" class="btn-control">Load Program</button>
                 <button onclick="shareProgram()" class="btn-control">Share Program</button>
                 <button onclick="loadPelvicFloorWorkout()" class="btn-control" style="background-color:#9b59b6;">Load Pelvic Floor Workout</button>
             </div>
+        </div>
+
+        <div class="container">
+            <h2>Saved Programs</h2>
+            <ul id="saved-programs-list"></ul>
+            <div id="saved-programs-empty" style="color: #999; font-style: italic;">No saved programs yet.</div>
         </div>
     </div>
 
@@ -228,6 +246,8 @@
         const doneButton = document.getElementById('done-button');
         const incrementRepButton = document.getElementById('increment-rep-button');
         const repCounter = document.getElementById('rep-counter');
+        const savedProgramsList = document.getElementById('saved-programs-list');
+        const savedProgramsEmpty = document.getElementById('saved-programs-empty');
         let manualCompleteCallback = null;
         let currentRepCount = 0;
         let totalReps = 0;
@@ -243,6 +263,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Do not create AudioContext here to avoid interrupting other playback (music).
             loadProgramFromUrlOrStorage();
+            renderSavedPrograms();
             // Attach listeners to exercise type radios to toggle UI
             document.querySelectorAll('input[name="exerciseType"]').forEach(r => r.addEventListener('change', () => {
                 toggleTypeFields();
@@ -579,10 +600,133 @@
         }
 
         // --- Data Persistence & Sharing ---
-        function saveProgram() {
-            localStorage.setItem('proWorkoutProgram', JSON.stringify(program));
-            alert("Program saved!");
+        function saveCurrentProgram() {
+            if (program.length === 0) return alert("Please add exercises first!");
+            
+            const programName = prompt("Enter program name:");
+            if (!programName || programName.trim() === '') return;
+            
+            let savedPrograms = JSON.parse(localStorage.getItem('savedPrograms')) || [];
+            
+            // Check if program with same name exists
+            const existingIndex = savedPrograms.findIndex(p => p.name === programName.trim());
+            if (existingIndex !== -1) {
+                if (!confirm(`Program "${programName}" already exists. Overwrite?`)) {
+                    return;
+                }
+                savedPrograms[existingIndex] = {
+                    name: programName.trim(),
+                    exercises: JSON.parse(JSON.stringify(program)),
+                    savedAt: new Date().toLocaleString('en-US')
+                };
+            } else {
+                savedPrograms.push({
+                    name: programName.trim(),
+                    exercises: JSON.parse(JSON.stringify(program)),
+                    savedAt: new Date().toLocaleString('en-US')
+                });
+            }
+            
+            localStorage.setItem('savedPrograms', JSON.stringify(savedPrograms));
+            renderSavedPrograms();
+            alert(`"${programName}" saved successfully!`);
         }
+
+        function renderSavedPrograms() {
+            const savedPrograms = JSON.parse(localStorage.getItem('savedPrograms')) || [];
+            savedProgramsList.innerHTML = '';
+            
+            if (savedPrograms.length === 0) {
+                savedProgramsEmpty.style.display = 'block';
+                return;
+            }
+            
+            savedProgramsEmpty.style.display = 'none';
+            
+            savedPrograms.forEach((prog, idx) => {
+                const li = document.createElement('li');
+                const exerciseCount = prog.exercises.length;
+                const totalSets = prog.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+                
+                li.innerHTML = `
+                    <div class="saved-program-info">
+                        <div>${prog.name}</div>
+                        <div>${exerciseCount} exercises • ${totalSets} sets • Saved: ${prog.savedAt}</div>
+                    </div>
+                    <div class="saved-program-actions">
+                        <button class="btn-control btn-move" ${idx === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="btn-control btn-move" ${idx === savedPrograms.length - 1 ? 'disabled' : ''}>↓</button>
+                        <button class="btn-control btn-start">▶ Start</button>
+                        <button class="btn-control btn-load">📂 Load</button>
+                        <button class="btn-control btn-remove">🗑️ Delete</button>
+                    </div>
+                `;
+                
+                const buttons = li.querySelectorAll('button');
+                buttons[0].onclick = () => moveSavedProgramUp(idx); // Up button
+                buttons[1].onclick = () => moveSavedProgramDown(idx); // Down button
+                buttons[2].onclick = () => loadAndStartProgram(idx); // Start button
+                buttons[3].onclick = () => loadSavedProgram(idx); // Load button
+                buttons[4].onclick = () => deleteSavedProgram(idx); // Delete button
+                
+                savedProgramsList.appendChild(li);
+            });
+        }
+
+        function loadSavedProgram(index) {
+            const savedPrograms = JSON.parse(localStorage.getItem('savedPrograms')) || [];
+            if (index < 0 || index >= savedPrograms.length) return;
+            
+            program = JSON.parse(JSON.stringify(savedPrograms[index].exercises));
+            renderProgram();
+            alert(`"${savedPrograms[index].name}" loaded!`);
+            window.scrollTo(0, 0);
+        }
+
+        function loadAndStartProgram(index) {
+            const savedPrograms = JSON.parse(localStorage.getItem('savedPrograms')) || [];
+            if (index < 0 || index >= savedPrograms.length) return;
+            
+            program = JSON.parse(JSON.stringify(savedPrograms[index].exercises));
+            renderProgram();
+            startProgram();
+        }
+
+        function deleteSavedProgram(index) {
+            const savedPrograms = JSON.parse(localStorage.getItem('savedPrograms')) || [];
+            if (index < 0 || index >= savedPrograms.length) return;
+            
+            const programName = savedPrograms[index].name;
+            if (confirm(`Delete "${programName}"?`)) {
+                savedPrograms.splice(index, 1);
+                localStorage.setItem('savedPrograms', JSON.stringify(savedPrograms));
+                renderSavedPrograms();
+                alert(`"${programName}" deleted!`);
+            }
+        }
+
+        function moveSavedProgramUp(index) {
+            const savedPrograms = JSON.parse(localStorage.getItem('savedPrograms')) || [];
+            if (index > 0) {
+                const temp = savedPrograms[index];
+                savedPrograms[index] = savedPrograms[index - 1];
+                savedPrograms[index - 1] = temp;
+                localStorage.setItem('savedPrograms', JSON.stringify(savedPrograms));
+                renderSavedPrograms();
+            }
+        }
+
+        function moveSavedProgramDown(index) {
+            const savedPrograms = JSON.parse(localStorage.getItem('savedPrograms')) || [];
+            if (index < savedPrograms.length - 1) {
+                const temp = savedPrograms[index];
+                savedPrograms[index] = savedPrograms[index + 1];
+                savedPrograms[index + 1] = temp;
+                localStorage.setItem('savedPrograms', JSON.stringify(savedPrograms));
+                renderSavedPrograms();
+            }
+        }
+
         function loadProgram() {
             const saved = localStorage.getItem('proWorkoutProgram');
             if (saved) {
