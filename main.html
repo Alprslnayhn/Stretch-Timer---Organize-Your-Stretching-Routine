@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Exercise Timer</title>
+    <style>
+        :root {
+            --primary-bg: #1a2a3a;
+            --secondary-bg: #2a3a4a;
+            --tertiary-bg: rgba(255,255,255,0.05);
+            --primary-text: #f0f0f0;
+            --accent-color: #3C8CE7;
+            --green-color: #2ECC71;
+            --red-color: #E74C3C;
+            --yellow-color: #F1C40F;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--primary-bg);
+            color: var(--primary-text);
+            margin: 0;
+            padding: 20px;
+        }
+        .hidden { display: none !important; }
+        .container { max-width: 800px; margin: 10px auto; background: var(--tertiary-bg); padding: 20px; border-radius: 10px; }
+        h1, h2 { color: #fff; border-bottom: 1px solid var(--secondary-bg); padding-bottom: 10px; }
+
+        /* Settings & Form */
+        .settings-panel, #exercise-form { text-align: left; }
+        .settings-panel label { font-weight: bold; }
+        #exercise-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        #exercise-form label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        #exercise-form input { width: 100%; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #445; background: var(--secondary-bg); color: var(--primary-text); }
+        .full-width { grid-column: 1 / -1; }
+
+        /* Buttons */
+        button { padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; color: white; cursor: pointer; margin: 5px; transition: background-color 0.3s, transform 0.1s; }
+        button:hover { filter: brightness(1.1); }
+        button:active { transform: translateY(1px); }
+        .btn-add { background-color: var(--accent-color); }
+        .btn-update { background-color: var(--yellow-color); color: #1a2a3a; }
+        .btn-control { background-color: var(--green-color); }
+        .btn-edit { background-color: var(--yellow-color); padding: 5px 10px; font-size: 14px; }
+        .btn-delete { background-color: var(--red-color); padding: 5px 10px; font-size: 14px; }
+
+        /* Program List */
+        #program-list { list-style: none; padding: 0; text-align: left; }
+        #program-list li { background: rgba(0,0,0,0.2); margin: 8px 0; padding: 10px 15px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        #program-list li.active-exercise { box-shadow: 0 0 10px var(--accent-color); background: var(--accent-color); }
+        .exercise-details { font-size: 0.8em; color: #bbb; }
+
+        /* Workout View */
+        #workout-container { display: flex; gap: 20px; text-align: left; }
+        #workout-timer-view { flex-grow: 1; }
+        #workout-program-view { width: 300px; flex-shrink: 0; }
+        #exercise-image { width: 100%; height: 250px; object-fit: cover; border-radius: 10px; margin-bottom: 20px; background: var(--secondary-bg); }
+        #status { font-size: 2.5em; margin: 10px 0; font-weight: bold; text-align: center; }
+
+        /* SVG Timer */
+        .timer-wrapper { position: relative; width: 250px; height: 250px; margin: 20px auto; }
+        .timer-wrapper svg { transform: rotate(-90deg); }
+        .timer-bg, .timer-progress { fill: none; stroke-width: 15; }
+        .timer-bg { stroke: var(--secondary-bg); }
+        .timer-progress { stroke: var(--yellow-color); transition: stroke-dashoffset 1s linear; }
+        .timer-progress.rest-color { stroke: var(--accent-color); }
+        #timer { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4em; font-weight: bold; color: var(--primary-text); }
+    </style>
+</head>
+<body>
+
+    <div id="setup-container">
+        <div class="container">
+            <h2>Settings</h2>
+            <div class="settings-panel">
+                <label><input type="checkbox" id="confirm-next" checked> Ask for confirmation between exercises</label>
+                <label><input type="checkbox" id="confirm-next-set" checked> Ask for confirmation between sets in Duration and Reps</label>
+                <div style="margin-top:8px;">
+                    <strong>Sounds:</strong>
+                    <div style="display:flex;flex-direction:column;margin-top:6px;">
+                        <label style="font-weight:normal;"><input type="checkbox" id="sound-between-sets" checked> Play sound between sets</label>
+                        <label style="font-weight:normal;"><input type="checkbox" id="sound-per-rep" checked> Play sound after each rep</label>
+                        <label style="font-weight:normal;"><input type="checkbox" id="sound-rest-end" checked> Play sound when rest ends</label>
+                        <label style="font-weight:normal;"><input type="checkbox" id="prefer-vibrate"> Prefer vibration instead of beep (won't interrupt music)</label>
+                    </div>
+                    <div style="margin-top:10px;display:flex;flex-direction:column;gap:10px;">
+                        <div>
+                            <label style="display:block;font-weight:normal;margin-bottom:5px;">
+                                Exercise Sounds Volume: <span id="exercise-volume-display">1000</span>%
+                            </label>
+                            <input type="range" id="exercise-volume" min="0" max="1000" value="1000" style="width:100%;max-width:200px;">
+                            <button type="button" onclick="playSound('set_end')" class="btn-control" style="margin-top:5px;padding:5px 10px;font-size:14px;">Test Exercise Sound</button>
+                        </div>
+                        <div>
+                            <label style="display:block;font-weight:normal;margin-bottom:5px;">
+                                Rest Sounds Volume: <span id="rest-volume-display">1000</span>%
+                            </label>
+                            <input type="range" id="rest-volume" min="0" max="1000" value="1000" style="width:100%;max-width:200px;">
+                            <button type="button" onclick="playSound('rest_end')" class="btn-control" style="margin-top:5px;padding:5px 10px;font-size:14px;">Test Rest Sound</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+        <div class="container">
+            <h2>Create Exercise Program</h2>
+            <form id="exercise-form" onsubmit="handleFormSubmit(); return false;">
+                <input type="hidden" id="editing-index" value="-1">
+                        <div class="full-width">
+                            <label for="exerciseName">Exercise Name:</label>
+                            <input type="text" id="exerciseName" placeholder="Ex: Shoulder Stretch" required>
+                        </div>
+
+                        <!-- Exercise type: Duration, Reps, or Duration and Reps -->
+                        <div class="full-width" id="exercise-type-group">
+                            <label>Exercise Type:</label>
+                            <div style="display:flex;gap:10px;align-items:center;">
+                                <label style="font-weight:normal;"><input type="radio" name="exerciseType" value="duration"> 🕒 Duration-based</label>
+                                <label style="font-weight:normal;"><input type="radio" name="exerciseType" value="reps"> 🔁 Reps-based</label>
+                                <label style="font-weight:normal;"><input type="radio" name="exerciseType" value="duration-reps"> ⏱️ Duration and Reps</label>
+                            </div>
+                            <div id="type-error" class="hidden" role="alert" style="color:var(--yellow-color);margin-top:6px;">Please select exercise type.</div>
+                        </div>
+                <div>
+                    <label for="sets">Number of Sets:</label>
+                    <input type="number" id="sets" min="1" value="3">
+                </div>
+                <div id="duration-field">
+                    <label for="exerciseDuration">Duration (seconds):</label>
+                    <input type="number" id="exerciseDuration" min="1" value="30">
+                </div>
+
+                <div id="reps-field" class="hidden">
+                    <label for="exerciseReps">Number of Reps:</label>
+                    <input type="number" id="exerciseReps" min="1" value="10">
+                </div>
+                <div id="rep-duration-field" class="hidden">
+                    <label for="repDuration">Duration per Rep (seconds):</label>
+                    <input type="number" id="repDuration" min="1" value="5">
+                </div>
+                <div id="inter-rep-rest-field" class="hidden">
+                    <label for="interRepRest">Rest Between Reps (s):</label>
+                    <input type="number" id="interRepRest" min="0" value="2">
+                </div>
+                <div>
+                    <label for="intraSetRest">Rest Between Sets (s):</label>
+                    <input type="number" id="intraSetRest" min="0" value="10">
+                </div>
+                <div>
+                    <label for="restAfter">Rest After Exercise (s):</label>
+                    <input type="number" id="restAfter" min="0" value="30">
+                </div>
+                 <div class="full-width">
+                    <label><input type="checkbox" id="isBilateral" onchange="toggleSideSwitchTime()"> Is this exercise bilateral (Left/Right)?</label>
+                </div>
+                <div class="full-width hidden" id="side-switch-time-container">
+                    <label for="sideSwitchTime">Side Switch Time (s):</label>
+                    <input type="number" id="sideSwitchTime" min="1" value="5">
+                </div>
+                <div class="full-width">
+                    <label for="imageUrl">Photo URL (Optional):</label>
+                    <input type="text" id="imageUrl" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="full-width">
+                    <button type="submit" id="form-submit-button" class="btn-add">Add Exercise</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="container">
+            <h2>Current Program</h2>
+            <ul id="program-list"></ul>
+            <div id="program-controls">
+                <button onclick="startProgram()" class="btn-control">Start Program</button>
+                <button onclick="saveProgram()" class="btn-control">Save Program</button>
+                <button onclick="loadProgram()" class="btn-control">Load Program</button>
+                <button onclick="shareProgram()" class="btn-control">Share Program</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="workout-container" class="hidden">
+        <div id="workout-timer-view">
+            <h1 id="status">Get Ready...</h1>
+            <img id="exercise-image" src="" alt="Exercise Image" class="hidden">
+            <div class="timer-wrapper">
+                <svg width="250" height="250" viewBox="0 0 100 100">
+                    <circle class="timer-bg" cx="50" cy="50" r="45"></circle>
+                    <circle class="timer-progress" cx="50" cy="50" r="45" stroke-dasharray="282.7" stroke-dashoffset="0"></circle>
+                </svg>
+                <div id="timer">00:00</div>
+            </div>
+            <div id="manual-controls" class="hidden" style="text-align:center;margin-top:12px;">
+                <div style="font-size:1.5em;margin-bottom:10px;color:var(--yellow-color);" id="rep-counter">1/10</div>
+                <button id="increment-rep-button" class="btn-control" style="margin-right:5px;">+1 Rep</button>
+                <button id="done-button" class="btn-control">Done</button>
+            </div>
+        </div>
+        <div id="workout-program-view">
+            <h2>Program Flow</h2>
+            <ul id="workout-program-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const setupContainer = document.getElementById('setup-container');
+        const workoutContainer = document.getElementById('workout-container');
+        const exerciseForm = document.getElementById('exercise-form');
+        const programListUl = document.getElementById('program-list');
+        const workoutProgramListUl = document.getElementById('workout-program-list');
+        const statusH1 = document.getElementById('status');
+        const timerDiv = document.getElementById('timer');
+        const exerciseImage = document.getElementById('exercise-image');
+        const confirmNextCheckbox = document.getElementById('confirm-next');
+        const formSubmitButton = document.getElementById('form-submit-button');
+        const editingIndexInput = document.getElementById('editing-index');
+        const confirmNextSetCheckbox = document.getElementById('confirm-next-set');
+        const soundBetweenSetsCheckbox = document.getElementById('sound-between-sets');
+        const soundPerRepCheckbox = document.getElementById('sound-per-rep');
+        const soundRestEndCheckbox = document.getElementById('sound-rest-end');
+        const sideSwitchContainer = document.getElementById('side-switch-time-container');
+        const timerProgress = document.querySelector('.timer-progress');
+        const SVG_CIRCUMFERENCE = 282.7;
+        const manualControls = document.getElementById('manual-controls');
+        const doneButton = document.getElementById('done-button');
+        const incrementRepButton = document.getElementById('increment-rep-button');
+        const repCounter = document.getElementById('rep-counter');
+        let manualCompleteCallback = null;
+        let currentRepCount = 0;
+        let totalReps = 0;
+
+        // --- State Management ---
+        let program = [];
+        let currentExerciseIndex = 0;
+        let currentSet = 1;
+        let timerInterval;
+        let audioContext = null; // create lazily to avoid interrupting other audio
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Do not create AudioContext here to avoid interrupting other playback (music).
+            loadProgramFromUrlOrStorage();
+            // Attach listeners to exercise type radios to toggle UI
+            document.querySelectorAll('input[name="exerciseType"]').forEach(r => r.addEventListener('change', () => {
+                toggleTypeFields();
+                // hide type error when user chooses
+                document.getElementById('type-error').classList.add('hidden');
+            }));
+            
+            // Load volume settings from localStorage
+            const savedExerciseVolume = localStorage.getItem('exerciseVolume');
+            const savedRestVolume = localStorage.getItem('restVolume');
+            
+            const exerciseVolumeSlider = document.getElementById('exercise-volume');
+            const restVolumeSlider = document.getElementById('rest-volume');
+            
+            if (exerciseVolumeSlider) {
+                if (savedExerciseVolume) exerciseVolumeSlider.value = savedExerciseVolume;
+                else localStorage.setItem('exerciseVolume', '1000');
+                document.getElementById('exercise-volume-display').innerText = exerciseVolumeSlider.value;
+                exerciseVolumeSlider.addEventListener('input', (e) => {
+                    document.getElementById('exercise-volume-display').innerText = e.target.value;
+                    localStorage.setItem('exerciseVolume', e.target.value);
+                });
+            }
+            if (restVolumeSlider) {
+                if (savedRestVolume) restVolumeSlider.value = savedRestVolume;
+                else localStorage.setItem('restVolume', '1000');
+                document.getElementById('rest-volume-display').innerText = restVolumeSlider.value;
+                restVolumeSlider.addEventListener('input', (e) => {
+                    document.getElementById('rest-volume-display').innerText = e.target.value;
+                    localStorage.setItem('restVolume', e.target.value);
+                });
+            }
+        });
+
+        function toggleSideSwitchTime() {
+            sideSwitchContainer.classList.toggle('hidden', !document.getElementById('isBilateral').checked);
+        }
+
+        doneButton.addEventListener('click', () => {
+            if (manualCompleteCallback) {
+                const cb = manualCompleteCallback;
+                manualCompleteCallback = null;
+                manualControls.classList.add('hidden');
+                cb();
+            }
+        });
+
+        incrementRepButton.addEventListener('click', () => {
+            if (currentRepCount < totalReps) {
+                currentRepCount++;
+                if (repCounter) repCounter.innerText = `${currentRepCount}/${totalReps}`;
+                // If all reps done, auto-trigger Done
+                if (currentRepCount === totalReps) {
+                    setTimeout(() => {
+                        if (manualCompleteCallback) {
+                            const cb = manualCompleteCallback;
+                            manualCompleteCallback = null;
+                            manualControls.classList.add('hidden');
+                            cb();
+                        }
+                    }, 500);
+                }
+            }
+        });
+
+        // --- Sound Engine ---
+        function playSound(type) {
+            const preferVibrate = document.getElementById('prefer-vibrate');
+            if (preferVibrate && preferVibrate.checked) {
+                if (navigator.vibrate) {
+                    // short vibration to notify without interrupting music
+                    navigator.vibrate(80);
+                    return;
+                }
+            }
+
+            // create AudioContext lazily to avoid stealing audio focus on page load
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) { console.warn('Web Audio API is not supported.'); return; }
+            }
+
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+
+            // Get volume settings from localStorage (will work even if sliders are hidden)
+            const exerciseVolume = (parseInt(localStorage.getItem('exerciseVolume') || document.getElementById('exercise-volume')?.value || 100) / 100);
+            const restVolume = (parseInt(localStorage.getItem('restVolume') || document.getElementById('rest-volume')?.value || 100) / 100);
+            
+            // Use lower max volume to reduce interruption
+            let baseVolume = 0.18;
+            let freq = 440, duration = 0.08, attack = 0.005, decay = 0.07;
+            let isRest = false;
+            
+            switch(type) {
+                case 'set_end': freq = 660; baseVolume *= exerciseVolume; break;
+                case 'rep_end': freq = 520; baseVolume *= exerciseVolume; break;
+                case 'rest_end': freq = 880; duration = 0.14; decay=0.12; baseVolume *= restVolume; isRest = true; break;
+                case 'rest_start': freq = 330; baseVolume *= restVolume; isRest = true; break;
+            }
+
+            gain.gain.setValueAtTime(0, audioContext.currentTime);
+            gain.gain.linearRampToValueAtTime(baseVolume, audioContext.currentTime + attack);
+            gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration);
+            osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+            osc.start();
+            osc.stop(audioContext.currentTime + duration);
+        }
+
+        // --- Program & Form Management ---
+        function handleFormSubmit() {
+            const index = parseInt(editingIndexInput.value);
+
+            const selectedTypeEl = document.querySelector('input[name="exerciseType"]:checked');
+            if (!selectedTypeEl) {
+                // show inline error and focus first radio
+                const err = document.getElementById('type-error');
+                err.classList.remove('hidden');
+                const firstRadio = document.querySelector('input[name="exerciseType"]');
+                if (firstRadio) firstRadio.focus();
+                return;
+            }
+
+            const type = selectedTypeEl.value; // 'duration' or 'reps'
+            const name = document.getElementById('exerciseName').value.trim();
+            const sets = parseInt(document.getElementById('sets').value);
+            const intraSetRest = parseInt(document.getElementById('intraSetRest').value);
+            const restAfter = parseInt(document.getElementById('restAfter').value);
+            const isBilateral = document.getElementById('isBilateral').checked;
+            const sideSwitchTime = parseInt(document.getElementById('sideSwitchTime').value);
+            const imageUrl = document.getElementById('imageUrl').value.trim();
+
+            // build exercise object depending on type
+            const exercise = { name, sets, intraSetRest, restAfter, isBilateral, sideSwitchTime, imageUrl, type };
+
+            if (type === 'duration') {
+                const duration = parseInt(document.getElementById('exerciseDuration').value);
+                exercise.duration = duration;
+                exercise.reps = null;
+                exercise.repDuration = null;
+                exercise.interRepRest = null;
+                if (!name || isNaN(sets) || isNaN(duration)) {
+                    return alert('Please fill in required fields (name, sets, duration).');
+                }
+            } else if (type === 'reps') {
+                const reps = parseInt(document.getElementById('exerciseReps').value);
+                exercise.reps = reps;
+                exercise.duration = null;
+                exercise.repDuration = null;
+                exercise.interRepRest = null;
+                if (!name || isNaN(sets) || isNaN(reps)) {
+                    return alert('Please fill in required fields (name, sets, reps).');
+                }
+            } else if (type === 'duration-reps') {
+                const reps = parseInt(document.getElementById('exerciseReps').value);
+                const repDuration = parseInt(document.getElementById('repDuration').value);
+                const interRepRest = parseInt(document.getElementById('interRepRest').value);
+                exercise.reps = reps;
+                exercise.duration = null;
+                exercise.repDuration = repDuration;
+                exercise.interRepRest = interRepRest;
+                if (!name || isNaN(sets) || isNaN(reps) || isNaN(repDuration)) {
+                    return alert('Please fill in required fields (name, sets, reps, duration per rep).');
+                }
+            }
+
+            if (index === -1) { // Add new
+                program.push(exercise);
+            } else { // Update existing
+                program[index] = exercise;
+            }
+            renderProgram();
+            resetForm();
+        }
+
+        function editExercise(index) {
+            const exercise = program[index];
+            editingIndexInput.value = index;
+            document.getElementById('exerciseName').value = exercise.name;
+            document.getElementById('sets').value = exercise.sets;
+            // If exercise has type/reps, restore selection and fields
+            if (exercise.type === 'duration-reps') {
+                const r = document.querySelector('input[name="exerciseType"][value="duration-reps"]');
+                if (r) r.checked = true;
+                document.getElementById('reps-field').classList.remove('hidden');
+                document.getElementById('duration-field').classList.add('hidden');
+                document.getElementById('rep-duration-field').classList.remove('hidden');
+                document.getElementById('inter-rep-rest-field').classList.remove('hidden');
+                document.getElementById('exerciseReps').value = exercise.reps || '';
+                document.getElementById('repDuration').value = exercise.repDuration || 5;
+                document.getElementById('interRepRest').value = exercise.interRepRest || 0;
+            } else if (exercise.type === 'reps' || (exercise.reps && !exercise.duration && !exercise.repDuration)) {
+                const r = document.querySelector('input[name="exerciseType"][value="reps"]');
+                if (r) r.checked = true;
+                document.getElementById('reps-field').classList.remove('hidden');
+                document.getElementById('duration-field').classList.add('hidden');
+                document.getElementById('rep-duration-field').classList.add('hidden');
+                document.getElementById('inter-rep-rest-field').classList.add('hidden');
+                document.getElementById('exerciseReps').value = exercise.reps || '';
+            } else {
+                const r = document.querySelector('input[name="exerciseType"][value="duration"]');
+                if (r) r.checked = true;
+                document.getElementById('reps-field').classList.add('hidden');
+                document.getElementById('duration-field').classList.remove('hidden');
+                document.getElementById('rep-duration-field').classList.add('hidden');
+                document.getElementById('inter-rep-rest-field').classList.add('hidden');
+                document.getElementById('exerciseDuration').value = exercise.duration || '';
+            }
+            document.getElementById('intraSetRest').value = exercise.intraSetRest;
+            document.getElementById('restAfter').value = exercise.restAfter;
+            document.getElementById('isBilateral').checked = exercise.isBilateral;
+            document.getElementById('sideSwitchTime').value = exercise.sideSwitchTime || 5;
+            document.getElementById('imageUrl').value = exercise.imageUrl;
+
+            toggleSideSwitchTime();
+            formSubmitButton.textContent = "Update Exercise";
+            formSubmitButton.className = 'btn-update';
+            window.scrollTo(0, 0);
+        }
+
+        function resetForm() {
+            exerciseForm.reset();
+            editingIndexInput.value = -1;
+            formSubmitButton.textContent = "Add Exercise";
+            formSubmitButton.className = 'btn-add';
+            toggleSideSwitchTime();
+            // clear type selection and hide errors/fields
+            document.querySelectorAll('input[name="exerciseType"]').forEach(r => r.checked = false);
+            document.getElementById('type-error').classList.add('hidden');
+            document.getElementById('reps-field').classList.add('hidden');
+            document.getElementById('rep-duration-field').classList.add('hidden');
+            document.getElementById('inter-rep-rest-field').classList.add('hidden');
+            document.getElementById('duration-field').classList.remove('hidden');
+        }
+
+        function toggleTypeFields() {
+            const sel = document.querySelector('input[name="exerciseType"]:checked')?.value;
+            if (sel === 'reps') {
+                document.getElementById('reps-field').classList.remove('hidden');
+                document.getElementById('duration-field').classList.add('hidden');
+                document.getElementById('rep-duration-field').classList.add('hidden');
+                document.getElementById('inter-rep-rest-field').classList.add('hidden');
+            } else if (sel === 'duration-reps') {
+                document.getElementById('reps-field').classList.remove('hidden');
+                document.getElementById('duration-field').classList.add('hidden');
+                document.getElementById('rep-duration-field').classList.remove('hidden');
+                document.getElementById('inter-rep-rest-field').classList.remove('hidden');
+            } else {
+                document.getElementById('reps-field').classList.add('hidden');
+                document.getElementById('duration-field').classList.remove('hidden');
+                document.getElementById('rep-duration-field').classList.add('hidden');
+                document.getElementById('inter-rep-rest-field').classList.add('hidden');
+            }
+        }
+
+        function deleteExercise(index) {
+            if (confirm(`Are you sure you want to delete ${program[index].name}?`)) {
+                program.splice(index, 1);
+                renderProgram();
+            }
+        }
+
+        function moveExerciseUp(index) {
+            if (index > 0) {
+                const temp = program[index];
+                program[index] = program[index - 1];
+                program[index - 1] = temp;
+                renderProgram();
+            }
+        }
+
+        function moveExerciseDown(index) {
+            if (index < program.length - 1) {
+                const temp = program[index];
+                program[index] = program[index + 1];
+                program[index + 1] = temp;
+                renderProgram();
+            }
+        }
+
+        function renderProgram() {
+            const lists = [programListUl, workoutProgramListUl];
+            lists.forEach(ul => ul.innerHTML = '');
+            program.forEach((ex, index) => {
+                let mainMetric = '';
+                let detailsExtra = '';
+                if (ex.type === 'duration-reps') {
+                    mainMetric = `${ex.reps} reps (${ex.repDuration}s per rep)`;
+                    if (ex.interRepRest > 0) {
+                        detailsExtra = `, ${ex.interRepRest}s rest between reps`;
+                    }
+                } else if (ex.type === 'reps' || (ex.reps && !ex.duration && !ex.repDuration)) {
+                    mainMetric = `${ex.reps} reps`;
+                } else {
+                    mainMetric = `${ex.duration}s`;
+                }
+                const details = `${ex.sets} sets, ${mainMetric}${detailsExtra}, ${ex.intraSetRest}s rest between sets, ${ex.restAfter}s rest after`;
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <b>${index + 1}. ${ex.name}</b>
+                        <div class="exercise-details">${details}</div>
+                    </div>
+                    <div>
+                        <button class="btn-edit" style="font-size:12px;padding:4px 8px;" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="btn-edit" style="font-size:12px;padding:4px 8px;" ${index === program.length - 1 ? 'disabled' : ''}>↓</button>
+                        <button class="btn-edit">Edit</button>
+                        <button class="btn-delete">Delete</button>
+                    </div>`;
+                
+                // Attach event listeners
+                const buttons = li.querySelectorAll('button');
+                buttons[0].onclick = () => moveExerciseUp(index); // Up button
+                buttons[1].onclick = () => moveExerciseDown(index); // Down button
+                buttons[2].onclick = () => editExercise(index); // Edit button
+                buttons[3].onclick = () => deleteExercise(index); // Delete button
+                
+                const liClone = li.cloneNode(true);
+                // Re-attach listeners for the cloned node
+                const cloneButtons = liClone.querySelectorAll('button');
+                cloneButtons[0].onclick = () => moveExerciseUp(index);
+                cloneButtons[1].onclick = () => moveExerciseDown(index);
+                cloneButtons[2].onclick = () => editExercise(index);
+                cloneButtons[3].onclick = () => deleteExercise(index);
+                programListUl.appendChild(li);
+                workoutProgramListUl.appendChild(liClone);
+            });
+        }
+
+        // --- Data Persistence & Sharing ---
+        function saveProgram() {
+            localStorage.setItem('proWorkoutProgram', JSON.stringify(program));
+            alert("Program saved!");
+        }
+        function loadProgram() {
+            const saved = localStorage.getItem('proWorkoutProgram');
+            if (saved) {
+                program = JSON.parse(saved);
+                renderProgram();
+            }
+        }
+        function loadProgramFromUrlOrStorage() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('program')) {
+                try {
+                    const data = JSON.parse(decodeURIComponent(atob(urlParams.get('program'))));
+                    program = data;
+                    renderProgram();
+                    alert('Shared program loaded!');
+                    window.history.replaceState({}, '', window.location.pathname);
+                } catch(e) { loadProgram(); }
+            } else {
+                loadProgram();
+            }
+        }
+        function shareProgram() {
+            if (program.length === 0) return alert("No program to share.");
+            const data = btoa(encodeURIComponent(JSON.stringify(program)));
+            const url = `${window.location.origin}${window.location.pathname}?program=${data}`;
+            navigator.clipboard.writeText(url).then(() => alert("Share link copied to clipboard!"), () => prompt("Link:", url));
+        }
+
+        // --- Workout Execution Logic ---
+        function startProgram() {
+            if (program.length === 0) return alert("No program to start.");
+            currentExerciseIndex = 0;
+            setupContainer.classList.add('hidden');
+            workoutContainer.classList.remove('hidden');
+            runNextExercise();
+        }
+
+        function stopProgram() {
+            clearInterval(timerInterval);
+            manualCompleteCallback = null;
+            if (manualControls) manualControls.classList.add('hidden');
+            workoutContainer.classList.add('hidden');
+            setupContainer.classList.remove('hidden');
+        }
+
+        function runNextExercise() {
+            if (currentExerciseIndex >= program.length) {
+                alert("Program Complete!");
+                stopProgram();
+                return;
+            }
+            const proceed = () => {
+                const exercise = program[currentExerciseIndex];
+                currentSet = 1;
+                highlightActiveExercise(currentExerciseIndex);
+                exerciseImage.src = exercise.imageUrl || '';
+                exerciseImage.classList.toggle('hidden', !exercise.imageUrl);
+                runSet();
+            };
+            if (currentExerciseIndex > 0 && confirmNextCheckbox.checked) {
+                if (confirm(`Next exercise: ${program[currentExerciseIndex].name}. Click OK to start.`)) {
+                    proceed();
+                } else {
+                    stopProgram();
+                }
+            } else {
+                proceed();
+            }
+        }
+
+        function runSet() {
+            const exercise = program[currentExerciseIndex];
+            if (currentSet > exercise.sets) {
+                if (exercise.restAfter > 0) {
+                    runPhase(`Rest`, exercise.restAfter, true, () => {
+                        currentExerciseIndex++;
+                        runNextExercise();
+                    });
+                } else {
+                    currentExerciseIndex++;
+                    runNextExercise();
+                }
+                return;
+            }
+
+            const onSetComplete = () => {
+                if (soundBetweenSetsCheckbox && soundBetweenSetsCheckbox.checked) playSound('set_end');
+                if (currentSet < exercise.sets && exercise.intraSetRest > 0) {
+                    runPhase(`Rest Between Sets`, exercise.intraSetRest, true, () => {
+                        // If user requested confirmation between sets for duration+reps, prompt after rest
+                        if (exercise.type === 'duration-reps' && confirmNextSetCheckbox && confirmNextSetCheckbox.checked) {
+                            if (confirm(`Ready for set ${currentSet + 1}/${exercise.sets}? Click OK to start next set, Cancel to stop.`)) {
+                                currentSet++;
+                                runSet();
+                            } else {
+                                stopProgram();
+                            }
+                        } else {
+                            currentSet++;
+                            runSet();
+                        }
+                    });
+                } else if (currentSet < exercise.sets) {
+                    // For Duration and Reps type, ask for confirmation if enabled
+                    if (exercise.type === 'duration-reps' && confirmNextSetCheckbox && confirmNextSetCheckbox.checked) {
+                        if (confirm(`Ready for set ${currentSet + 1}/${exercise.sets}? Click OK to continue.`)) {
+                            currentSet++;
+                            runSet();
+                        } else {
+                            stopProgram();
+                        }
+                    } else {
+                        currentSet++;
+                        runSet();
+                    }
+                } else {
+                    currentSet++;
+                    runSet();
+                }
+            };
+
+            const phaseName = `${exercise.name} (${currentSet}/${exercise.sets})`;
+            
+            // Handle duration and reps based exercises with individual rep durations
+            if (exercise.type === 'duration-reps' && exercise.repDuration) {
+                let currentRep = 1;
+                const runRep = () => {
+                    if (currentRep > exercise.reps) {
+                        onSetComplete();
+                        return;
+                    }
+                    const repLabel = `${phaseName} - Rep ${currentRep}/${exercise.reps}`;
+                    runPhase(repLabel, exercise.repDuration, false, () => {
+                        if (soundPerRepCheckbox && soundPerRepCheckbox.checked) playSound('rep_end');
+                        if (currentRep < exercise.reps && exercise.interRepRest > 0) {
+                            runPhase(`Rest`, exercise.interRepRest, true, () => {
+                                currentRep++;
+                                runRep();
+                            });
+                        } else {
+                            currentRep++;
+                            runRep();
+                        }
+                    });
+                };
+                runRep();
+                return;
+            }
+            
+            // Handle reps-based exercises (without duration per rep)
+            if (exercise.type === 'reps' || (exercise.reps && !exercise.duration && !exercise.repDuration)) {
+                // Manual reps flow: prompt user to do reps and press Done
+                currentRepCount = 0;
+                totalReps = exercise.reps;
+                // Display set progress in the timer display and rep counter in the rep-counter element
+                timerDiv.innerText = `${currentSet}/${exercise.sets}`;
+                if (repCounter) repCounter.innerText = `0/${totalReps}`;
+                statusH1.innerText = `${exercise.name}: ${exercise.reps} reps. Tap +1 Rep or press Done when finished.`;
+                if (manualControls) manualControls.classList.remove('hidden');
+                manualCompleteCallback = () => {
+                    if (manualControls) manualControls.classList.add('hidden');
+                    onSetComplete();
+                };
+                return;
+            }
+            
+            // Handle duration-based exercises
+            if (exercise.isBilateral) {
+                runPhase(`${phaseName} (Right)`, exercise.duration, false, () => {
+                   runPhase(`Switch Sides`, exercise.sideSwitchTime, true, () => {
+                       runPhase(`${phaseName} (Left)`, exercise.duration, false, onSetComplete);
+                   });
+                });
+            } else {
+                runPhase(phaseName, exercise.duration, false, onSetComplete);
+            }
+        }
+
+        function runPhase(name, duration, isRest, onComplete) {
+            statusH1.innerText = name;
+            timerProgress.classList.toggle('rest-color', isRest);
+            if (isRest) playSound('rest_start');
+
+            let timeLeft = duration;
+            const totalDuration = duration;
+
+            const updateVisuals = () => {
+                const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const seconds = (timeLeft % 60).toString().padStart(2, '0');
+                timerDiv.innerText = `${minutes}:${seconds}`;
+                const progress = timeLeft / totalDuration;
+                timerProgress.style.strokeDashoffset = (1 - progress) * SVG_CIRCUMFERENCE;
+            };
+
+            updateVisuals();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateVisuals();
+                if (timeLeft < 0) {
+                    clearInterval(timerInterval);
+                        if (!isRest || (isRest && soundRestEndCheckbox && soundRestEndCheckbox.checked)) {
+                            // play rest_end only when configured
+                            if (isRest) playSound('rest_end');
+                        }
+                        if (onComplete) onComplete();
+                }
+            }, 1000);
+        }
+
+        function highlightActiveExercise(index) {
+            workoutProgramListUl.querySelectorAll('li').forEach((li, i) => {
+                li.classList.toggle('active-exercise', i === index);
+            });
+        }
+    </script>
+</body>
+</html>
