@@ -396,7 +396,8 @@
             const intraSetRest = parseInt(document.getElementById('intraSetRest').value);
             const restAfter = parseInt(document.getElementById('restAfter').value);
             const isBilateral = document.getElementById('isBilateral').checked;
-            const sideSwitchTime = parseInt(document.getElementById('sideSwitchTime').value);
+            let sideSwitchTime = parseInt(document.getElementById('sideSwitchTime').value);
+            if (isNaN(sideSwitchTime) || sideSwitchTime < 1) sideSwitchTime = 5;
             const imageUrl = document.getElementById('imageUrl').value.trim();
 
             // build exercise object depending on type
@@ -967,25 +968,47 @@
             
             // Handle reps-based exercises (without duration per rep)
             if (exercise.type === 'reps' || (exercise.reps && !exercise.duration && !exercise.repDuration)) {
-                // Manual reps flow: prompt user to do reps and press Done
-                currentRepCount = 0;
-                totalReps = exercise.reps;
-                // Display set progress in the timer display and rep counter in the rep-counter element
-                timerDiv.innerText = `${currentSet}/${exercise.sets}`;
-                if (repCounter) repCounter.innerText = `0/${totalReps}`;
-                statusH1.innerText = `${exercise.name}: ${exercise.reps} reps. Tap +1 Rep or press Done when finished.`;
-                if (manualControls) manualControls.classList.remove('hidden');
-                manualCompleteCallback = () => {
-                    if (manualControls) manualControls.classList.add('hidden');
-                    onSetComplete();
+                // Manual reps flow: support bilateral (Right/Left) sets
+                const switchTime = (typeof exercise.sideSwitchTime === 'number' && !isNaN(exercise.sideSwitchTime) && exercise.sideSwitchTime > 0) ? exercise.sideSwitchTime : 5;
+
+                const startManualForSide = (side, done) => {
+                    currentRepCount = 0;
+                    totalReps = exercise.reps;
+                    timerDiv.innerText = `${currentSet}/${exercise.sets}`;
+                    if (repCounter) repCounter.innerText = `0/${totalReps}`;
+                    statusH1.innerText = `${exercise.name} - Make it ${side}: ${exercise.reps} reps. Tap +1 Rep or press Done when finished.`;
+                    if (manualControls) manualControls.classList.remove('hidden');
+                    manualCompleteCallback = () => {
+                        if (manualControls) manualControls.classList.add('hidden');
+                        manualCompleteCallback = null;
+                        done();
+                    };
                 };
+
+                if (exercise.isBilateral) {
+                    // Start with Right side, then switch, then Left side
+                    startManualForSide('Right', () => {
+                        // After completing Right side reps, give side switch time and prompt to make it Left
+                        runPhase(`Make it Left`, switchTime, true, () => {
+                            startManualForSide('Left', () => {
+                                onSetComplete();
+                            });
+                        });
+                    });
+                } else {
+                    // Non-bilateral: single manual reps session
+                    startManualForSide('', () => {
+                        onSetComplete();
+                    });
+                }
                 return;
             }
             
             // Handle duration-based exercises
             if (exercise.isBilateral) {
+                const switchTime = (typeof exercise.sideSwitchTime === 'number' && !isNaN(exercise.sideSwitchTime) && exercise.sideSwitchTime > 0) ? exercise.sideSwitchTime : 5;
                 runPhase(`${phaseName} (Right)`, exercise.duration, false, () => {
-                   runPhase(`Switch Sides`, exercise.sideSwitchTime, true, () => {
+                   runPhase(`Switch Sides`, switchTime, true, () => {
                        runPhase(`${phaseName} (Left)`, exercise.duration, false, onSetComplete);
                    });
                 });
