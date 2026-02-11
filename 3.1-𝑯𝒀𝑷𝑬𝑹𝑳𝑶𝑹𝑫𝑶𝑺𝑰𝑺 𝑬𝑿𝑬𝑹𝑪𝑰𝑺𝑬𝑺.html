@@ -733,6 +733,9 @@
             if (saved) {
                 program = JSON.parse(saved);
                 renderProgram();
+            } else {
+                // Kaydedilmiş program yoksa, Pelvic Floor Workout'u varsayılan olarak yükle
+                loadPelvicFloorWorkout();
             }
         }
         function loadProgramFromUrlOrStorage() {
@@ -760,11 +763,13 @@
             const pelvicFloorProgram = [
                 {
                     name: "Pelvik Tilt (Posterior Pelvic Tilt)",
-                    type: "reps",
-                    reps: 10,
-                    sets: 2,
-                    intraSetRest: 30,
-                    restAfter: 60,
+                    type: "duration-reps",
+                    reps: 12,
+                    repDuration: 5,
+                    interRepRest: 2,
+                    sets: 3,
+                    intraSetRest: 15,
+                    restAfter: 30,
                     isBilateral: false,
                     sideSwitchTime: 5,
                     imageUrl: ""
@@ -772,21 +777,21 @@
                 {
                     name: "Dead Bug",
                     type: "reps",
-                    reps: 8,
+                    reps: 10,
                     sets: 2,
-                    intraSetRest: 30,
-                    restAfter: 60,
+                    intraSetRest: 15,
+                    restAfter: 30,
                     isBilateral: false,
-                    sideSwitchTime: 5,
+                    sideSwitchTime: 10,
                     imageUrl: ""
                 },
                 {
                     name: "Glute Bridge",
                     type: "reps",
-                    reps: 10,
-                    sets: 2,
-                    intraSetRest: 30,
-                    restAfter: 60,
+                    reps: 15,
+                    sets: 3,
+                    intraSetRest: 15,
+                    restAfter: 30,
                     isBilateral: false,
                     sideSwitchTime: 5,
                     imageUrl: ""
@@ -794,45 +799,43 @@
                 {
                     name: "Cat-Cow (Kedi-İnek Pozisyonu)",
                     type: "reps",
-                    reps: 10,
-                    sets: 1,
-                    intraSetRest: 0,
-                    restAfter: 60,
+                    reps: 15,
+                    sets: 2,
+                    intraSetRest: 15,
+                    restAfter: 30,
                     isBilateral: false,
                     sideSwitchTime: 5,
                     imageUrl: ""
                 },
                 {
                     name: "Lunge + Pelvis Kontrolü",
-                    type: "duration-reps",
-                    reps: 2,
-                    repDuration: 30,
-                    interRepRest: 30,
-                    sets: 1,
-                    intraSetRest: 0,
-                    restAfter: 60,
-                    isBilateral: false,
-                    sideSwitchTime: 5,
+                    type: "duration",
+                    duration: 30,
+                    sets: 2,
+                    intraSetRest: 15,
+                    restAfter: 30,
+                    isBilateral: true,
+                    sideSwitchTime: 10,
                     imageUrl: ""
                 },
                 {
                     name: "Bird Dog",
                     type: "reps",
-                    reps: 8,
+                    reps: 10,
                     sets: 2,
-                    intraSetRest: 30,
-                    restAfter: 60,
-                    isBilateral: false,
-                    sideSwitchTime: 5,
+                    intraSetRest: 15,
+                    restAfter: 30,
+                    isBilateral: true,
+                    sideSwitchTime: 10,
                     imageUrl: ""
                 },
                 {
                     name: "Wall Sit (Duvarda Oturma)",
                     type: "duration",
-                    duration: 40,
-                    sets: 2,
-                    intraSetRest: 45,
-                    restAfter: 60,
+                    duration: 50,
+                    sets: 3,
+                    intraSetRest: 20,
+                    restAfter: 30,
                     isBilateral: false,
                     sideSwitchTime: 5,
                     imageUrl: ""
