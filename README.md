@@ -1,88 +1,142 @@
+
+---
+
 # 🏋️‍♂️ Stretch Timer & Workout Manager
 
-**A progressive web application designed to manage stretching routines, physical therapy exercises (e.g., Hyperlordosis correction), and interval workouts.**
+**A robust, client-side web application designed to orchestrate complex physical therapy routines, interval training, and stretching sessions.**
 
-This project started as a simple loop timer and has evolved into a fully customizable workout manager capable of handling complex routines, repetition counting, and program persistence.
-
----
-
-## 🚀 Project Evolution
-
-### Phase 1: The Beginning (v1.0)
-The initial version of this project was a straightforward **Interval Timer**. It was designed with a simple goal: provide a loop for stretching.
-
-* **Features:** Global settings for set count, stretch duration, and rest duration.
-* **Design:** Minimalist interface focused on a single repeating loop.
-* **Limitation:** It could only handle one type of duration for all sets.
-
-![Legacy Version v1.0](img/v1-legacy-timer.png)
-*(v1.0: The initial "Orange Theme" interface with global timer settings)*
+Initially developed as a simple loop timer, this project has evolved into a fully-featured **Workout Management System**. It features local data persistence, custom audio cues, and a dynamic state machine capable of handling both duration-based and repetition-based exercises.
 
 ---
 
-### Phase 2: The Workout Manager (v2.0 & Current)
-The project underwent a complete overhaul to support **complex workout routines**. The focus shifted from a simple timer to a "Workout Builder" that supports specific exercises, repetition tracking, and data persistence.
+## 📋 Table of Contents
 
-#### 1. Advanced Program Creation
-Unlike v1, the new version allows you to build a routine exercise by exercise.
-* **Hybrid Inputs:** You can now choose between **Duration-based** (e.g., Planks), **Reps-based** (e.g., Crunches), or **Hybrid** exercises.
-* **Customization:** Each exercise has its own set count, rest intervals, and specific targets.
-
-![Create Exercise](img/v2-create-exercise.png)
-
-#### 2. Routine Management & Persistence
-Users can now see their entire workout flow, reorder exercises, and save their favorite routines (e.g., "Level 1" or "Morning Stretch") directly to the browser's Local Storage.
-
-![Current Program List](img/v2-program-list.png)
-![Saved Programs](img/v2-saved-programs.png)
-
-#### 3. Interactive Workout Mode
-The execution screen was redesigned for better focus.
-* **Visual Cues:** A large progress ring indicates the remaining time or reps.
-* **Manual & Auto Modes:** For rep-based exercises, the timer waits for user confirmation ("Done" button) before proceeding to the rest period.
-
-![Active Workout Mode](img/v2-active-workout.png)
-
-#### 4. Enhanced Settings
-Added granular control over the user experience, including:
-* **Audio Feedback:** Distinct sounds for start, rest, and complete.
-* **Confirmation Toggles:** Options to auto-advance or wait for user input between sets.
-
-![Settings Menu](img/v2-settings.png)
+* [Features](https://www.google.com/search?q=%23-features)
+* [Architecture & Evolution](https://www.google.com/search?q=%23-architecture--evolution)
+* [Installation & Usage](https://www.google.com/search?q=%23-installation--usage)
+* [Project Structure](https://www.google.com/search?q=%23-project-structure)
+* [Contributing](https://www.google.com/search?q=%23-contributing)
+* [License](https://www.google.com/search?q=%23-license)
 
 ---
 
-## 🛠️ Tech Stack
+## ✨ Features
 
-* **Core:** HTML5, CSS3, JavaScript (ES6+)
-* **Storage:** Web LocalStorage API (for saving programs)
-* **Styling:** Custom CSS with a responsive dark theme
-* **Audio:** Native HTML5 Audio API
+### Core Functionality
 
-## 📦 How to Use
+* **Hybrid Exercise Support:** Seamlessly mix **Time-based** (e.g., Planks), **Repetition-based** (e.g., Squats), and **Hybrid** exercises in a single routine.
+* **Dynamic State Machine:** The timer logic handles complex transitions: `Prepare` -> `Work` -> `Rest (Inter-set)` -> `Rest (Inter-exercise)`.
+* **Smart Audio Feedback:** Distinct auditory cues for start, stop, and completion events.
+* **Auto-Flow Options:** Configurable settings to either auto-advance between sets or wait for user confirmation (ideal for rep tracking).
 
-Since this is a client-side web application, no installation is required.
+### Data Persistence
 
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/Alprslnayhn/Stretch-Timer---Organize-Your-Stretching-Routine.git](https://github.com/Alprslnayhn/Stretch-Timer---Organize-Your-Stretching-Routine.git)
-    ```
-2.  **Open the file:**
-    Navigate to the folder and double-click `index.html` (or the latest `.html` file) to open it in your web browser.
+* **Local Storage Integration:** Routines are serialized and stored in the browser's `localStorage`. No database or backend required.
+* **CRUD Operations:** Users can Create, Read, Update, and Delete custom workout programs.
+
+---
+
+## 🏗 Architecture & Evolution
+
+This project demonstrates a clear evolution from a stateless script to a stateful application.
+
+### v1.0: The Stateless Loop (Legacy)
+
+The initial iteration was a linear script designed for uniform stretching loops. It lacked state retention and flexibility.
+
+* **Limitation:** Could only handle a single duration variable for all sets.
+* **UI:** Minimalist, single-purpose interface.
+
+*(Fig 1: The initial prototype focusing on simple loops)*
+
+---
+
+### v2.0: The Workout Manager (Current)
+
+The codebase was refactored to support Object-Oriented principles, allowing for modular exercise objects and a persistent workout state.
+
+#### 1. Routine Construction (The Builder Pattern)
+
+Users define complex workout structures. The application parses inputs (sets, reps, rest times) into a structured JSON-like object before execution.
+
+#### 2. Program Management & Persistence
+
+The UI now includes a dashboard for managing saved routines. This allows for rapid context switching between different therapy sessions (e.g., "Hyperlordosis Correction" vs. "Morning Stretch").
+
+#### 3. Execution Environment
+
+The runtime interface is optimized for focus. It features a reactive UI that updates the DOM based on the timer's current state tick.
+
+* **Visual Feedback:** Progressive circular progress bar.
+* **Interaction:** Manual overrides for repetition completion.
+
+#### 4. System Configuration
+
+Global settings manage the application's behavior, controlling audio volume, vibration feedback, and transition logic.
+
+---
+
+## 🚀 Installation & Usage
+
+This project is a **Static Web Application**. It requires no backend compilation or package manager installation.
+
+### Option 1: Direct Usage
+
+Simply clone the repository and open the main HTML file in any modern browser.
+
+```bash
+git clone https://github.com/Alprslnayhn/Stretch-Timer---Organize-Your-Stretching-Routine.git
+# Navigate to folder and double-click index.html
+
+```
+
+### Option 2: Local Server (Recommended)
+
+For the best experience (especially to avoid CORS issues with audio assets), serve the files using Python's built-in HTTP server:
+
+```bash
+cd Stretch-Timer---Organize-Your-Stretching-Routine
+python3 -m http.server 8000
+
+```
+
+Then visit `http://localhost:8000` in your browser.
+
+---
+
+## 📂 Project Structure
+
+```text
+/
+├── index.html          # Main application entry point (formerly 2.2-main.html)
+├── css/                # Stylesheets and responsive design rules
+├── js/                 # Application logic (Timer class, UI handlers)
+├── assets/             # Audio files (beep.mp3, finish.mp3)
+├── img/                # Screenshots for documentation
+└── README.md           # Project documentation
+
+```
+
+---
 
 ## 🤝 Contributing
 
-Contributions are welcome! If you have ideas for new features (e.g., export to PDF, cloud sync), feel free to fork the repo and submit a pull request.
+Contributions to improve the logic or UI are welcome. Please follow these steps:
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/NewFeature`).
+3. Commit your changes.
+4. Push to the branch and open a **Pull Request**.
+
+---
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+This project is open-source and available under the [MIT License](https://www.google.com/search?q=LICENSE).
 
 ---
-*Developed by [Alprslnayhn](https://github.com/Alprslnayhn)*
+
+*Developed by [Alprslnayhn](https://www.google.com/search?q=https://github.com/Alprslnayhn) - 2026*
+
+---
+
