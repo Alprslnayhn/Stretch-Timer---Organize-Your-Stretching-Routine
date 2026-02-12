@@ -1,133 +1,88 @@
-# Stretch-Timer---Organize-Your-Stretching-Routine
-Stretch Timer A customizable Python timer for organizing your stretching routine. Set your number of sets, stretch duration, and rest intervals. Compatible with multiple platforms. Stay active and flexible! 🚀
+# 🏋️‍♂️ Stretch Timer & Workout Manager
 
-Here's an update to the README file with the **"How to Use"** section added at the end, as you requested:
+**A progressive web application designed to manage stretching routines, physical therapy exercises (e.g., Hyperlordosis correction), and interval workouts.**
 
----
-
-# Python Stretch Timer
-
-This project provides a timer to organize your stretching exercises. It allows the user to set the number of sets, the duration of each stretch, and the rest period between sets. The timer alternates between right and left stretches, displaying a real-time countdown for each phase.
-
-## Features
-
-- **User Inputs:** Customize the number of sets, stretch duration, and rest duration.
-- **Real-Time Countdown:** Displays remaining time during each phase.
-- **Cross-Platform Compatibility:** Works on computers, Android, and has a web-based alternative.
+This project started as a simple loop timer and has evolved into a fully customizable workout manager capable of handling complex routines, repetition counting, and program persistence.
 
 ---
 
-## Requirements
+## 🚀 Project Evolution
 
-**For Python Version:**
+### Phase 1: The Beginning (v1.0)
+The initial version of this project was a straightforward **Interval Timer**. It was designed with a simple goal: provide a loop for stretching.
 
-- Python 3.6 or higher
-- Terminal or command-line tool
+* **Features:** Global settings for set count, stretch duration, and rest duration.
+* **Design:** Minimalist interface focused on a single repeating loop.
+* **Limitation:** It could only handle one type of duration for all sets.
 
----
-
-## How to Use:
-
-1. **Save the Code:** Save the provided Python code as a `.py` file (for example, `setup.py`).
-2. **Ensure Python is Installed:** Before running, make sure Python is installed on your system.
-3. **Run the Script:**
-   - Open your terminal or command-line tool and navigate to the folder where you saved the script:
-     ```bash
-     cd path_to_your_folder
-     ```
-   - Run the script by executing:
-     ```bash
-     python3 setup.py
-     ```
-   - The script will install the necessary packages and download the sound file for the timer.
+![Legacy Version v1.0](img/v1-legacy-timer.png)
+*(v1.0: The initial "Orange Theme" interface with global timer settings)*
 
 ---
 
-## How to Run
+### Phase 2: The Workout Manager (v2.0 & Current)
+The project underwent a complete overhaul to support **complex workout routines**. The focus shifted from a simple timer to a "Workout Builder" that supports specific exercises, repetition tracking, and data persistence.
 
-### On a Computer (Python)
+#### 1. Advanced Program Creation
+Unlike v1, the new version allows you to build a routine exercise by exercise.
+* **Hybrid Inputs:** You can now choose between **Duration-based** (e.g., Planks), **Reps-based** (e.g., Crunches), or **Hybrid** exercises.
+* **Customization:** Each exercise has its own set count, rest intervals, and specific targets.
 
-1. **Download the Project File:**
-   - Save the provided code as a `.py` file (e.g., `stretch_timer.py`).
+![Create Exercise](img/v2-create-exercise.png)
 
-2. **Set Up Python:**
-   - Ensure Python is installed.
-   - Download Python from the [official website](https://www.python.org/downloads/).
+#### 2. Routine Management & Persistence
+Users can now see their entire workout flow, reorder exercises, and save their favorite routines (e.g., "Level 1" or "Morning Stretch") directly to the browser's Local Storage.
 
-3. **Run the Script:**
-   - Open a terminal or command prompt, navigate to the folder containing the script:
-     ```bash
-     cd path_to_your_folder
-     ```
-   - Run the script with:
-     ```bash
-     python stretch_timer.py
-     ```
+![Current Program List](img/v2-program-list.png)
+![Saved Programs](img/v2-saved-programs.png)
 
----
+#### 3. Interactive Workout Mode
+The execution screen was redesigned for better focus.
+* **Visual Cues:** A large progress ring indicates the remaining time or reps.
+* **Manual & Auto Modes:** For rep-based exercises, the timer waits for user confirmation ("Done" button) before proceeding to the rest period.
 
-### On Android Devices (Python)
+![Active Workout Mode](img/v2-active-workout.png)
 
-1. **Install Termux:**
-   - Download Termux from Google Play or F-Droid.
+#### 4. Enhanced Settings
+Added granular control over the user experience, including:
+* **Audio Feedback:** Distinct sounds for start, rest, and complete.
+* **Confirmation Toggles:** Options to auto-advance or wait for user input between sets.
 
-2. **Install Python:**
-   - Open Termux and run:
-     ```bash
-     pkg update
-     pkg install python
-     ```
-
-3. **Run the Script:**
-   - Transfer the script to Termux and execute:
-     ```bash
-     python stretch_timer.py
-     ```
+![Settings Menu](img/v2-settings.png)
 
 ---
 
-### Web-Based Version
+## 🛠️ Tech Stack
 
-If you prefer not to use Python, a web-based JavaScript alternative is available.
+* **Core:** HTML5, CSS3, JavaScript (ES6+)
+* **Storage:** Web LocalStorage API (for saving programs)
+* **Styling:** Custom CSS with a responsive dark theme
+* **Audio:** Native HTML5 Audio API
 
-1. **HTML File:**
-   - Copy the provided [web timer code](https://github.com/...).
+## 📦 How to Use
 
-2. **Run in Browser:**
-   - Open the HTML file on your phone or computer using a browser.
+Since this is a client-side web application, no installation is required.
 
----
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/Alprslnayhn/Stretch-Timer---Organize-Your-Stretching-Routine.git](https://github.com/Alprslnayhn/Stretch-Timer---Organize-Your-Stretching-Routine.git)
+    ```
+2.  **Open the file:**
+    Navigate to the folder and double-click `index.html` (or the latest `.html` file) to open it in your web browser.
 
-## Supported Environments
+## 🤝 Contributing
 
-| **Platform** | **Supported?** | **How to Run**                                      |
-|--------------|----------------|-----------------------------------------------------|
-| Windows      | ✅              | Install Python and run via terminal.               |
-| MacOS        | ✅              | Install Python and run via terminal.               |
-| Linux        | ✅              | Install Python and run via terminal.               |
-| Android      | ✅              | Use Termux or Pydroid 3 to execute the script.     |
-| Web Browser  | ✅              | Open the HTML file for the JavaScript version.     |
-| iOS          | ⚠️              | Use the web version. Python requires additional apps.|
+Contributions are welcome! If you have ideas for new features (e.g., export to PDF, cloud sync), feel free to fork the repo and submit a pull request.
 
----
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
 
-## Developer Notes
+## 📄 License
 
-- Stretch and rest durations are fully customizable.
-- We welcome feedback and suggestions for improvements!
-
----
-
-## Contribute
-
-To contribute to this project, feel free to open a **Pull Request** or raise an **Issue**.
+Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
-
-## License
-
-This project is licensed under the MIT License.
-
-
-
-This **How to Use** section provides users with clear steps on saving, setting up, and running the script on their system. It also mentions that the script will install the required packages and download a sound file automatically, ensuring everything is ready for use!
+*Developed by [Alprslnayhn](https://github.com/Alprslnayhn)*
